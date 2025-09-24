@@ -1,0 +1,613 @@
+swagger: '2.0'
+info:
+  title: Triângulo Consórcio - API Copilot (Unificada)
+  version: 6.0.0
+host: localhost:8000
+basePath: /
+schemes:
+- http
+consumes:
+- application/json
+produces:
+- application/json
+securityDefinitions:
+  apiKeyAuth:
+    type: apiKey
+    name: X-API-Key
+    in: header
+security:
+- apiKeyAuth: []
+paths:
+  /healthz:
+    get:
+      summary: Health
+      responses:
+        '200':
+          description: OK
+  /utils/cep/{cep}:
+    get:
+      summary: Consulta CEP
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: path
+        name: cep
+        type: string
+        required: true
+  /catalog/cnsTiposGrupos:
+    get:
+      summary: 01 - Tipos de Grupos
+      responses:
+        '200':
+          description: OK
+      x-ms-openai-data:
+        openai-enabled: true
+  /catalog/cnsTiposVendas:
+    get:
+      summary: 02 - Tipos de Vendas
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: query
+        name: Codigo_Tipo_Grupo
+        type: string
+        required: true
+      x-ms-openai-data:
+        openai-enabled: true
+  /catalog/cnsBensDisponiveis:
+    get:
+      summary: 03 - Bens Disponíveis
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: query
+        name: Codigo_Tipo_Grupo
+        type: string
+        required: true
+      - in: query
+        name: Codigo_Tipo_Venda
+        type: string
+        required: true
+      x-ms-openai-data:
+        openai-enabled: true
+  /catalog/cnsPrazosDisponiveis:
+    get:
+      summary: 04 - Prazos Disponíveis
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: query
+        name: Codigo_Unidade
+        type: integer
+        required: true
+      - in: query
+        name: Codigo_Tipo_Grupo
+        type: string
+        required: true
+      - in: query
+        name: Codigo_Tipo_Venda
+        type: string
+        required: true
+      - in: query
+        name: Codigo_Bem
+        type: integer
+        required: true
+      - in: query
+        name: Codigo_Representante
+        type: integer
+        required: true
+      - in: query
+        name: Situacao_Grupo
+        type: string
+        enum:
+        - A
+        - F
+        - X
+        required: true
+      - in: query
+        name: Pessoa
+        type: string
+        enum:
+        - F
+        - J
+        required: true
+      - in: query
+        name: Ordem_Pesquisa
+        type: string
+        enum:
+        - P
+        - G
+        required: true
+      - in: query
+        name: Codigo_Filial
+        type: integer
+        required: true
+      - in: query
+        name: Prazo
+        type: integer
+        required: true
+      - in: query
+        name: Dia_Vencimento
+        type: integer
+        required: true
+      - in: query
+        name: Data_Assembleia
+        type: string
+        format: date
+        required: true
+      - in: query
+        name: Codigo_Grupo
+        type: integer
+        required: true
+      - in: query
+        name: SN_Rateia
+        type: string
+        enum:
+        - S
+        - N
+        required: true
+      x-ms-openai-data:
+        openai-enabled: true
+  /catalog/cnsRegraCobranca:
+    get:
+      summary: 04.1 - Regra de Cobrança
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: query
+        name: Codigo_Grupo
+        type: integer
+        required: true
+      - in: query
+        name: Prazo
+        type: integer
+        required: true
+      x-ms-openai-data:
+        openai-enabled: true
+  /catalog/cnsCaracteristicasGrupos:
+    get:
+      summary: 05 - Características
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: query
+        name: Codigo_Grupo
+        type: integer
+        required: true
+      x-ms-openai-data:
+        openai-enabled: true
+  /catalog/cnsReservaCotas:
+    get:
+      summary: 06.1 - Cotas para Reserva
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: query
+        name: Codigo_Grupo_Inicial
+        type: integer
+        required: true
+      - in: query
+        name: Codigo_Grupo_Final
+        type: integer
+        required: true
+      x-ms-openai-data:
+        openai-enabled: true
+  /proposals/prcIncluiReservaCotas:
+    post:
+      summary: 06.3 - Efetiva reserva de cota
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        type: string
+        required: false
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+          - Codigo_Cota
+          - Data_Validade
+          properties:
+            Codigo_Cota:
+              type: integer
+            Data_Validade:
+              type: string
+      x-ms-openai-data:
+        openai-enabled: true
+  /clients/cnsCliente:
+    get:
+      summary: 07.1 - Consulta cliente
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: query
+        name: Documento
+        type: string
+        required: false
+      - in: query
+        name: Codigo_Cliente
+        type: integer
+        required: false
+      x-ms-openai-data:
+        openai-enabled: true
+  /clients/prcManutencaoCliente_new:
+    post:
+      summary: 07.2 - Cria/atualiza cliente
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+          - Nome
+          - Documento
+          properties:
+            Codigo_Cliente:
+              type: integer
+            Nome:
+              type: string
+            Documento:
+              type: string
+            Email:
+              type: string
+            Telefone:
+              type: string
+      x-ms-openai-data:
+        openai-enabled: true
+  /billing/cnsBancosDebito:
+    get:
+      summary: 08.2 - Bancos para débito
+      responses:
+        '200':
+          description: OK
+      x-ms-openai-data:
+        openai-enabled: true
+  /billing/prcIncluiRegistroDebitoConta:
+    post:
+      summary: 08.3 - Incluir débito automático
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+          - Numero_Contrato
+          - Banco
+          - Agencia
+          - Conta
+          properties:
+            Numero_Contrato:
+              type: integer
+            Banco:
+              type: string
+            Agencia:
+              type: string
+            Conta:
+              type: string
+      x-ms-openai-data:
+        openai-enabled: true
+  /catalog/cnsCalendarioAssembleias:
+    get:
+      summary: 08.4 - Calendário de Assembleias
+      responses:
+        '200':
+          description: OK
+      x-ms-openai-data:
+        openai-enabled: true
+  /simulate/cnsSimulador:
+    post:
+      summary: Simula valores
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        type: string
+        required: false
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+          - Codigo_Grupo
+          - Prazo
+          - Valor_Bem
+          properties:
+            Codigo_Grupo:
+              type: integer
+            Prazo:
+              type: integer
+            Valor_Bem:
+              type: number
+      x-ms-openai-data:
+        openai-enabled: true
+  /proposals/prcIncluiProposta:
+    post:
+      summary: 09 - Inclui proposta
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        type: string
+        required: false
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+          - Codigo_Grupo
+          - Codigo_Bem
+          - Prazo
+          - Codigo_Cliente
+          properties:
+            Codigo_Grupo:
+              type: integer
+            Codigo_Bem:
+              type: integer
+            Prazo:
+              type: integer
+            Codigo_Cliente:
+              type: integer
+            Numero_Assembleia_Emissao:
+              type: integer
+      x-ms-openai-data:
+        openai-enabled: true
+  /proposals/{Numero_Contrato}/prcIncluiPropostaRecebimento:
+    post:
+      summary: 09.x - Registra recebimento da proposta
+      parameters:
+      - in: path
+        name: Numero_Contrato
+        type: integer
+        required: true
+      - in: body
+        name: body
+        required: false
+        schema:
+          type: object
+          properties:
+            Valor:
+              type: number
+      responses:
+        '200':
+          description: OK
+      x-ms-openai-data:
+        openai-enabled: true
+  /billing/cnsEmiteBoletoProposta:
+    post:
+      summary: 10 - Emite boleto da proposta
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            Numero_Contrato:
+              type: integer
+            Data_Vencimento_Boleto:
+              type: string
+              default: '1900-01-01'
+      x-ms-openai-data:
+        openai-enabled: true
+  /proposals/{Numero_Contrato}/cnsEmiteProposta:
+    post:
+      summary: 11 - Emite contrato (PDF)
+      parameters:
+      - in: path
+        name: Numero_Contrato
+        type: integer
+        required: true
+      responses:
+        '200':
+          description: OK
+      x-ms-openai-data:
+        openai-enabled: true
+  /integrations/crm/leads:
+    post:
+      summary: CRM - Upsert lead
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            id:
+              type: string
+            nome:
+              type: string
+            contato:
+              type: string
+            origem:
+              type: string
+            etapa:
+              type: string
+      x-ms-openai-data:
+        openai-enabled: true
+  /integrations/crm/opportunities:
+    post:
+      summary: CRM - Upsert oportunidade
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            id:
+              type: string
+            lead_id:
+              type: string
+            valor:
+              type: number
+            etapa:
+              type: string
+      x-ms-openai-data:
+        openai-enabled: true
+  /integrations/whatsapp/webhook:
+    post:
+      summary: WhatsApp - Inbound webhook
+      responses:
+        '200':
+          description: OK
+      x-ms-openai-data:
+        openai-enabled: true
+  /integrations/whatsapp/send:
+    post:
+      summary: WhatsApp - Enviar mensagem
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: query
+        name: to
+        type: string
+        required: true
+      - in: query
+        name: text
+        type: string
+        required: false
+      - in: query
+        name: template
+        type: string
+        required: false
+      x-ms-openai-data:
+        openai-enabled: true
+  /integrations/outlook/send:
+    post:
+      summary: Outlook - Enviar e-mail
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+          - to
+          - subject
+          - body_html
+          properties:
+            to:
+              type: array
+              items:
+                type: string
+            subject:
+              type: string
+            body_html:
+              type: string
+            attachments:
+              type: array
+              items:
+                type: object
+      x-ms-openai-data:
+        openai-enabled: true
+  /integrations/docusign/envelope:
+    post:
+      summary: DocuSign - Criar envelope
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+          - Numero_Contrato
+          - emails
+          - nome
+          - pdf_base64
+          properties:
+            Numero_Contrato:
+              type: integer
+            emails:
+              type: array
+              items:
+                type: string
+            nome:
+              type: string
+            pdf_base64:
+              type: string
+      x-ms-openai-data:
+        openai-enabled: true
+  /integrations/docusign/webhook:
+    post:
+      summary: DocuSign - Webhook
+      responses:
+        '200':
+          description: OK
+      x-ms-openai-data:
+        openai-enabled: true
+  /reports/vendas:
+    get:
+      summary: Relatório de vendas (JSON)
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: query
+        name: from_date
+        type: string
+        format: date
+        required: true
+      - in: query
+        name: to_date
+        type: string
+        format: date
+        required: true
+  /reports/vendas.csv:
+    get:
+      summary: Relatório de vendas (CSV)
+      responses:
+        '200':
+          description: OK
+      parameters:
+      - in: query
+        name: from_date
+        type: string
+        format: date
+        required: true
+      - in: query
+        name: to_date
+        type: string
+        format: date
+        required: true

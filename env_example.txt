@@ -1,0 +1,23 @@
+# API Configuration
+API_KEY=test-api-key-123
+
+# Newcon API Configuration
+NEWCON_BASE_URL=https://webatendimento.consorciotriangulo.com.br/wsregvenda/wsRegVenda.asmx
+NEWCON_MODE=soap
+NEWCON_TIMEOUT_SECONDS=30
+
+# Redis Configuration (opcional)
+# Se não configurado, usa cache em memória
+
+# Upstash Redis (recomendado)
+UPSTASH_REDIS_REST_URL=https://neutral-penguin-9127.upstash.io
+UPSTASH_REDIS_REST_TOKEN=ASOnAAImcDIxZTY1Y2M4ZDUzNmI0ODRlYTdhMGFjMWJmYWE4ZjU1NXAyOTEyNw
+
+# Redis tradicional (alternativa)
+REDIS_URL=redis://localhost:6379
+# Exemplos de outros serviços Redis:
+# Redis Cloud: redis://username:password@host:port
+# Railway: redis://default:password@host:port
+
+# Database Configuration (para idempotência)
+DATABASE_URL_IDEMPOTENCY=postgresql://user:password@host:port/database
