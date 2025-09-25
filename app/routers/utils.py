@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.security import require_api_key
 from app.schemas.base import ok, Envelope
 from app.infrastructure.cache import hybrid_cache
-import redis.asyncio as redis
+from app.infrastructure.cache.redis_client import redis_client
 import os
 from dotenv import load_dotenv
 
@@ -34,29 +34,21 @@ async def clear_cache():
     Use com cuidado em produção.
     """
     try:
-        # Conectar ao Redis
-        REDIS_URL = os.getenv("UPSTASH_REDIS_REST_URL")
-        REDIS_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN")
+        # Garantir que o Redis está conectado
+        if not redis_client.connected:
+            await redis_client.connect()
         
-        if not REDIS_URL or not REDIS_TOKEN:
-            raise HTTPException(status_code=500, detail="Configuração Redis não encontrada")
-        
-        redis_client = redis.from_url(f"redis://default:{REDIS_TOKEN}@{REDIS_URL.replace('https://', '').replace('http://', '')}")
-        
-        # Verificar conexão
-        await redis_client.ping()
+        if not redis_client.connected or not redis_client.client:
+            raise HTTPException(status_code=500, detail="Erro ao conectar com Redis")
         
         # Contar chaves antes da limpeza
-        keys_before = await redis_client.dbsize()
+        keys_before = await redis_client.client.dbsize()
         
         # Limpar todo o banco de dados
-        await redis_client.flushdb()
+        await redis_client.client.flushdb()
         
         # Verificar se foi limpo
-        keys_after = await redis_client.dbsize()
-        
-        # Fechar conexão
-        await redis_client.close()
+        keys_after = await redis_client.client.dbsize()
         
         return ok({
             "message": "Cache Redis limpo com sucesso",
@@ -65,8 +57,6 @@ async def clear_cache():
             "keys_removed": keys_before - keys_after
         })
         
-    except redis.ConnectionError:
-        raise HTTPException(status_code=500, detail="Erro ao conectar com Redis")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao limpar cache: {str(e)}")
 
@@ -76,33 +66,25 @@ async def cache_stats():
     Retorna estatísticas do cache Redis.
     """
     try:
-        # Conectar ao Redis
-        REDIS_URL = os.getenv("UPSTASH_REDIS_REST_URL")
-        REDIS_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN")
+        # Garantir que o Redis está conectado
+        if not redis_client.connected:
+            await redis_client.connect()
         
-        if not REDIS_URL or not REDIS_TOKEN:
-            raise HTTPException(status_code=500, detail="Configuração Redis não encontrada")
-        
-        redis_client = redis.from_url(f"redis://default:{REDIS_TOKEN}@{REDIS_URL.replace('https://', '').replace('http://', '')}")
-        
-        # Verificar conexão
-        await redis_client.ping()
+        if not redis_client.connected or not redis_client.client:
+            raise HTTPException(status_code=500, detail="Erro ao conectar com Redis")
         
         # Obter estatísticas
-        total_keys = await redis_client.dbsize()
+        total_keys = await redis_client.client.dbsize()
         
         # Contar chaves por padrão
-        bens_keys_list = await redis_client.keys("bens:*")
-        cache_keys_list = await redis_client.keys("*cache*")
+        bens_keys_list = await redis_client.client.keys("bens:*")
+        cache_keys_list = await redis_client.client.keys("*cache*")
         bens_keys = len(bens_keys_list)
         cache_keys = len(cache_keys_list)
         other_keys = total_keys - bens_keys - cache_keys
         
         # Obter informações do servidor
-        info = await redis_client.info()
-        
-        # Fechar conexão
-        await redis_client.close()
+        info = await redis_client.client.info()
         
         return ok({
             "total_keys": total_keys,
@@ -119,8 +101,6 @@ async def cache_stats():
             }
         })
         
-    except redis.ConnectionError:
-        raise HTTPException(status_code=500, detail="Erro ao conectar com Redis")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao obter estatísticas: {str(e)}")
 
@@ -130,28 +110,20 @@ async def clear_bens_cache():
     Limpa apenas o cache de bens disponíveis.
     """
     try:
-        # Conectar ao Redis
-        REDIS_URL = os.getenv("UPSTASH_REDIS_REST_URL")
-        REDIS_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN")
+        # Garantir que o Redis está conectado
+        if not redis_client.connected:
+            await redis_client.connect()
         
-        if not REDIS_URL or not REDIS_TOKEN:
-            raise HTTPException(status_code=500, detail="Configuração Redis não encontrada")
-        
-        redis_client = redis.from_url(f"redis://default:{REDIS_TOKEN}@{REDIS_URL.replace('https://', '').replace('http://', '')}")
-        
-        # Verificar conexão
-        await redis_client.ping()
+        if not redis_client.connected or not redis_client.client:
+            raise HTTPException(status_code=500, detail="Erro ao conectar com Redis")
         
         # Encontrar todas as chaves de bens
-        bens_keys = await redis_client.keys("bens:*")
+        bens_keys = await redis_client.client.keys("bens:*")
         
         # Deletar chaves de bens
         deleted_count = 0
         if bens_keys:
-            deleted_count = await redis_client.delete(*bens_keys)
-        
-        # Fechar conexão
-        await redis_client.close()
+            deleted_count = await redis_client.client.delete(*bens_keys)
         
         return ok({
             "message": "Cache de bens limpo com sucesso",
@@ -159,7 +131,5 @@ async def clear_bens_cache():
             "keys_found": len(bens_keys)
         })
         
-    except redis.ConnectionError:
-        raise HTTPException(status_code=500, detail="Erro ao conectar com Redis")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao limpar cache de bens: {str(e)}")
