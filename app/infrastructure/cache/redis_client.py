@@ -7,27 +7,37 @@ from datetime import timedelta
 
 class RedisClient:
     def __init__(self):
-        self.redis_url = os.environ.get("REDIS_URL", "")
-        self.upstash_rest_url = os.environ.get("UPSTASH_REDIS_REST_URL", "")
-        self.upstash_token = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
         self.client: Optional[redis.Redis] = None
         self.connected = False
         self.is_upstash = False
+    
+    def _get_config(self):
+        """Carrega configurações Redis das variáveis de ambiente"""
+        return {
+            "redis_url": os.environ.get("REDIS_URL", ""),
+            "upstash_rest_url": os.environ.get("UPSTASH_REDIS_REST_URL", ""),
+            "upstash_token": os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
+        }
         
     async def connect(self):
         """Conecta ao Redis (tradicional ou Upstash)"""
+        config = self._get_config()
+        upstash_rest_url = config["upstash_rest_url"]
+        upstash_token = config["upstash_token"]
+        redis_url = config["redis_url"]
+        
         # Prioriza Upstash se configurado
-        if self.upstash_rest_url and self.upstash_token:
+        if upstash_rest_url and upstash_token:
             try:
                 # Converte URL REST do Upstash para URL Redis tradicional
                 # https://neutral-penguin-9127.upstash.io -> redis://neutral-penguin-9127.upstash.io:6379
-                redis_host = self.upstash_rest_url.replace("https://", "").replace("http://", "")
+                redis_host = upstash_rest_url.replace("https://", "").replace("http://", "")
                 
                 # Usar configuração SSL mais compatível
                 self.client = redis.Redis(
                     host=redis_host,
                     port=6379,
-                    password=self.upstash_token,
+                    password=upstash_token,
                     decode_responses=True,
                     ssl=True,
                     ssl_cert_reqs=None
@@ -43,9 +53,9 @@ class RedisClient:
                 return False
         
         # Fallback para Redis tradicional
-        elif self.redis_url:
+        elif redis_url:
             try:
-                self.client = redis.from_url(self.redis_url, decode_responses=True)
+                self.client = redis.from_url(redis_url, decode_responses=True)
                 await self.client.ping()
                 self.connected = True
                 self.is_upstash = False

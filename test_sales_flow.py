@@ -10,9 +10,11 @@ import asyncio
 import aiohttp
 from datetime import date
 import sys
-import redis
 import os
 from dotenv import load_dotenv
+
+# Importar a classe RedisClient do projeto
+from app.infrastructure.cache.redis_client import redis_client
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -27,17 +29,9 @@ headers = {
     "Content-Type": "application/json"
 }
 
-# Configuração Redis
-REDIS_URL = os.getenv("UPSTASH_REDIS_REST_URL")
-REDIS_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN")
-
-# Cliente Redis
-redis_client = redis.from_url(f"redis://default:{REDIS_TOKEN}@{REDIS_URL.replace('https://', '').replace('http://', '')}")
-
-def cache_bens_result(codigo_tipo_grupo, codigo_tipo_venda, bens_data):
+async def cache_bens_result(codigo_tipo_grupo, codigo_tipo_venda, bens_data):
     """Armazena resultado de bens no Redis apenas se houver bens"""
     if bens_data and len(bens_data) > 0:
-        cache_key = f"bens:{codigo_tipo_grupo}:{codigo_tipo_venda}"
         cache_data = {
             "codigo_tipo_grupo": codigo_tipo_grupo,
             "codigo_tipo_venda": codigo_tipo_venda,
@@ -45,17 +39,24 @@ def cache_bens_result(codigo_tipo_grupo, codigo_tipo_venda, bens_data):
             "bens": bens_data,
             "cached_at": date.today().isoformat()
         }
-        redis_client.setex(cache_key, 3600, json.dumps(cache_data))  # TTL de 1 hora
-        print(f"   💾 Cacheado no Redis: {len(bens_data)} bens")
+        cache_key = f"bens:{codigo_tipo_grupo}:{codigo_tipo_venda}"
+        success = await redis_client.set(cache_key, cache_data, 3600)  # TTL de 1 hora
+        if success:
+            print(f"   💾 Cacheado no Redis: {len(bens_data)} bens")
+        else:
+            print(f"   ⚠️ Falha ao cachear no Redis")
     else:
         print(f"   ⚠️ Não cacheado (sem bens)")
 
-def get_cached_bens(codigo_tipo_grupo, codigo_tipo_venda):
+async def get_cached_bens(codigo_tipo_grupo, codigo_tipo_venda):
     """Recupera bens do cache Redis"""
+    if not redis_client.connected:
+        return None
     cache_key = f"bens:{codigo_tipo_grupo}:{codigo_tipo_venda}"
-    cached_data = redis_client.get(cache_key)
+    cached_data = await redis_client.get(cache_key)
     if cached_data:
-        return json.loads(cached_data)
+        print(f"   📦 Cache HIT: {len(cached_data.get('bens', []))} bens")
+        return cached_data.get('bens', [])
     return None
 
 def make_request(endpoint, params=None):
@@ -89,7 +90,7 @@ async def test_bens_batch(session, codigo_tipo_grupo, tipos_vendas_batch):
         descricao_venda = tipo_venda.get("DESCRICAO")
         
         # Verificar cache primeiro
-        cached_data = get_cached_bens(codigo_tipo_grupo, codigo_tipo_venda)
+        cached_data = await get_cached_bens(codigo_tipo_grupo, codigo_tipo_venda)
         if cached_data:
             print(f"📋 Venda {codigo_tipo_venda} ({descricao_venda}) - 💾 Cache: {cached_data['quantidade_bens']} bens")
             tasks.append({
@@ -266,7 +267,7 @@ async def test_03_bens_disponiveis(codigo_tipo_grupo, tipos_vendas):
                             print(f"   ✅ Venda {codigo_tipo_venda} ({descricao_venda}): {len(items)} bens")
                             
                             # Cachear no Redis apenas se houver bens
-                            cache_bens_result(codigo_tipo_grupo, codigo_tipo_venda, items)
+                            await cache_bens_result(codigo_tipo_grupo, codigo_tipo_venda, items)
                             
                             bens_encontrados.append({
                                 "tipo_venda": codigo_tipo_venda,
@@ -359,7 +360,16 @@ async def main():
     print("🚀 INICIANDO TESTES DO FLUXO DE VENDAS")
     print(f"🌐 API: {API_BASE_URL}")
     print(f"🔑 API Key: {API_KEY[:20]}...")
-    print(f"💾 Redis: {'Conectado' if redis_client.ping() else 'Desconectado'}")
+    
+    # Inicializar Redis
+    try:
+        await redis_client.connect()
+        if redis_client.connected:
+            print(f"💾 Redis: Conectado")
+        else:
+            print(f"💾 Redis: Desconectado")
+    except Exception as e:
+        print(f"💾 Redis: Erro na conexão ({e})")
     
     # Teste 01 - Tipos de Grupos
     tipo_grupo = test_01_tipos_grupos()
@@ -414,8 +424,12 @@ async def main():
     print(f"   - Prazo: {prazo.get('CODIGO_GRUPO', 'N/A')}")
     
     # Mostrar estatísticas do cache
-    cache_keys = redis_client.keys("bens:*")
-    print(f"\n💾 Cache Redis: {len(cache_keys)} entradas armazenadas")
+    if redis_client:
+        cache_keys = await redis_client.keys("bens:*")
+        print(f"\n💾 Cache Redis: {len(cache_keys)} entradas armazenadas")
+        await redis_client.aclose()
+    else:
+        print(f"\n💾 Cache Redis: Não disponível")
 
 if __name__ == "__main__":
     asyncio.run(main())
