@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.security import require_api_key
 from app.schemas.base import ok, Envelope
 from app.infrastructure.cache import hybrid_cache
-import redis
+import redis.asyncio as redis
 import os
 from dotenv import load_dotenv
 
@@ -12,6 +12,18 @@ router=APIRouter(dependencies=[Depends(require_api_key)], tags=['utils'])
 
 @router.get('/cep/{cep}', response_model=Envelope)
 async def cep(cep:str): return ok({'cep':cep})
+
+@router.get('/debug/env', response_model=Envelope, summary="Debug - Variáveis de ambiente")
+async def debug_env():
+    """
+    Debug: Mostra as variáveis de ambiente relacionadas ao Redis.
+    """
+    return ok({
+        "UPSTASH_REDIS_REST_URL": os.getenv("UPSTASH_REDIS_REST_URL", "NÃO CONFIGURADO"),
+        "UPSTASH_REDIS_REST_TOKEN": "***" + os.getenv("UPSTASH_REDIS_REST_TOKEN", "NÃO CONFIGURADO")[-4:] if os.getenv("UPSTASH_REDIS_REST_TOKEN") else "NÃO CONFIGURADO",
+        "REDIS_URL": os.getenv("REDIS_URL", "NÃO CONFIGURADO"),
+        "all_env_keys": [key for key in os.environ.keys() if "REDIS" in key.upper()]
+    })
 
 @router.delete('/cache/clear', response_model=Envelope, summary="Limpar todo o cache Redis")
 async def clear_cache():
@@ -32,19 +44,19 @@ async def clear_cache():
         redis_client = redis.from_url(f"redis://default:{REDIS_TOKEN}@{REDIS_URL.replace('https://', '').replace('http://', '')}")
         
         # Verificar conexão
-        redis_client.ping()
+        await redis_client.ping()
         
         # Contar chaves antes da limpeza
-        keys_before = redis_client.dbsize()
+        keys_before = await redis_client.dbsize()
         
         # Limpar todo o banco de dados
-        redis_client.flushdb()
+        await redis_client.flushdb()
         
         # Verificar se foi limpo
-        keys_after = redis_client.dbsize()
+        keys_after = await redis_client.dbsize()
         
         # Fechar conexão
-        redis_client.close()
+        await redis_client.close()
         
         return ok({
             "message": "Cache Redis limpo com sucesso",
@@ -74,21 +86,23 @@ async def cache_stats():
         redis_client = redis.from_url(f"redis://default:{REDIS_TOKEN}@{REDIS_URL.replace('https://', '').replace('http://', '')}")
         
         # Verificar conexão
-        redis_client.ping()
+        await redis_client.ping()
         
         # Obter estatísticas
-        total_keys = redis_client.dbsize()
+        total_keys = await redis_client.dbsize()
         
         # Contar chaves por padrão
-        bens_keys = len(redis_client.keys("bens:*"))
-        cache_keys = len(redis_client.keys("*cache*"))
+        bens_keys_list = await redis_client.keys("bens:*")
+        cache_keys_list = await redis_client.keys("*cache*")
+        bens_keys = len(bens_keys_list)
+        cache_keys = len(cache_keys_list)
         other_keys = total_keys - bens_keys - cache_keys
         
         # Obter informações do servidor
-        info = redis_client.info()
+        info = await redis_client.info()
         
         # Fechar conexão
-        redis_client.close()
+        await redis_client.close()
         
         return ok({
             "total_keys": total_keys,
@@ -126,18 +140,18 @@ async def clear_bens_cache():
         redis_client = redis.from_url(f"redis://default:{REDIS_TOKEN}@{REDIS_URL.replace('https://', '').replace('http://', '')}")
         
         # Verificar conexão
-        redis_client.ping()
+        await redis_client.ping()
         
         # Encontrar todas as chaves de bens
-        bens_keys = redis_client.keys("bens:*")
+        bens_keys = await redis_client.keys("bens:*")
         
         # Deletar chaves de bens
         deleted_count = 0
         if bens_keys:
-            deleted_count = redis_client.delete(*bens_keys)
+            deleted_count = await redis_client.delete(*bens_keys)
         
         # Fechar conexão
-        redis_client.close()
+        await redis_client.close()
         
         return ok({
             "message": "Cache de bens limpo com sucesso",
