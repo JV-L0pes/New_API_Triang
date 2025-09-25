@@ -30,8 +30,13 @@ headers = {
 }
 
 async def cache_bens_result(codigo_tipo_grupo, codigo_tipo_venda, bens_data):
-    """Armazena resultado de bens no Redis apenas se houver bens"""
-    if bens_data and len(bens_data) > 0:
+    """Armazena resultado de bens no Redis apenas se houver bens válidos"""
+    # Verificação mais rigorosa: deve ter dados, ser uma lista e ter pelo menos 1 item
+    if (bens_data and 
+        isinstance(bens_data, list) and 
+        len(bens_data) > 0 and
+        all(item for item in bens_data if item)):  # Verifica se todos os itens são válidos
+        
         cache_data = {
             "codigo_tipo_grupo": codigo_tipo_grupo,
             "codigo_tipo_venda": codigo_tipo_venda,
@@ -46,7 +51,7 @@ async def cache_bens_result(codigo_tipo_grupo, codigo_tipo_venda, bens_data):
         else:
             print(f"   ⚠️ Falha ao cachear no Redis")
     else:
-        print(f"   ⚠️ Não cacheado (sem bens)")
+        print(f"   ⚠️ Não cacheado (sem bens válidos)")
 
 async def get_cached_bens(codigo_tipo_grupo, codigo_tipo_venda):
     """Recupera bens do cache Redis"""
@@ -263,7 +268,7 @@ async def test_03_bens_disponiveis(codigo_tipo_grupo, tipos_vendas):
                     if result and "data" in result and "items" in result["data"]:
                         items = result["data"]["items"]
                         
-                        if items:
+                        if items and len(items) > 0:
                             print(f"   ✅ Venda {codigo_tipo_venda} ({descricao_venda}): {len(items)} bens")
                             
                             # Cachear no Redis apenas se houver bens

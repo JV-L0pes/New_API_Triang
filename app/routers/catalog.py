@@ -26,8 +26,29 @@ async def bens(Codigo_Tipo_Grupo:str, Codigo_Tipo_Venda:str, valor_busca:float=N
         await nc.close()
         return data
     
-    # Busca no cache (TTL de 30 minutos = 1800 segundos)
-    data = await hybrid_cache.get_or_set(cache_key, fetch_bens, ttl_seconds=1800)
+    # Verificar cache primeiro
+    cached_data = await hybrid_cache.get(cache_key)
+    if cached_data is not None:
+        # Se tem cache, verificar se tem bens válidos
+        if cached_data.get("items") and len(cached_data.get("items", [])) > 0:
+            data = cached_data
+        else:
+            # Cache vazio, buscar novamente
+            data = await fetch_bens()
+            # Só cacheia se tiver bens válidos
+            if data and data.get("items") and len(data.get("items", [])) > 0:
+                await hybrid_cache.set(cache_key, data, ttl_seconds=1800)
+    else:
+        # Sem cache, buscar dados
+        data = await fetch_bens()
+        # Só cacheia se tiver bens válidos
+        if data and data.get("items") and len(data.get("items", [])) > 0:
+            await hybrid_cache.set(cache_key, data, ttl_seconds=1800)
+    
+    # Verificar se há bens válidos antes de processar
+    if not data or "items" not in data or not data["items"] or len(data["items"]) == 0:
+        # Se não há bens, retorna resposta vazia
+        return ok({"items": [], "ok": True, "error": None})
     
     # Se não especificou valor de busca, retorna todos os bens
     if valor_busca is None:
