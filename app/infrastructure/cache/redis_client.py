@@ -24,7 +24,7 @@ class RedisClient:
                 redis_host = self.upstash_rest_url.replace("https://", "").replace("http://", "")
                 
                 # Usar configuração SSL mais compatível
-                self.client = redis.asyncio.Redis(
+                self.client = redis.Redis(
                     host=redis_host,
                     port=6379,
                     password=self.upstash_token,
@@ -45,7 +45,7 @@ class RedisClient:
         # Fallback para Redis tradicional
         elif self.redis_url:
             try:
-                self.client = redis.asyncio.from_url(self.redis_url, decode_responses=True)
+                self.client = redis.from_url(self.redis_url, decode_responses=True)
                 await self.client.ping()
                 self.connected = True
                 self.is_upstash = False
@@ -63,7 +63,7 @@ class RedisClient:
     async def disconnect(self):
         """Desconecta do Redis"""
         if self.client:
-            await self.client.close()
+            await self.client.aclose()
             self.connected = False
     
     async def get(self, key: str) -> Optional[Any]:
