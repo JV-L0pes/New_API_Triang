@@ -1,5 +1,9 @@
-# API Configuration
-API_KEY=test-api-key-123
+
+# Configurações da API
+API_KEY=eyJzdWIiOiJ0ZXN0ZTFAZW1haWwuY29tIiwidHlwZSI6Imludml0ZSIsImV4cCI6MTc1ODczODQ1Miwibm9uY2UiOiJkNmI5YjExYWUxYjM0N2JlYWZiMTJmMDU3MmNjNjc2MCJ9.QQLUDyhRvcE0Fz9OLDaOGHlRDgw-jiXwKohpSnLl1Ng
+
+# Security Configuration
+WEBHOOK_HMAC_SECRET=triangulo-webhook-secret-2025-dsa098nd0i1as9d87gf9asudbfsd9f87g1b97
 
 # Newcon API Configuration
 NEWCON_BASE_URL=https://webatendimento.consorciotriangulo.com.br/wsregvenda/wsRegVenda.asmx
@@ -13,11 +17,26 @@ NEWCON_TIMEOUT_SECONDS=30
 UPSTASH_REDIS_REST_URL=https://neutral-penguin-9127.upstash.io
 UPSTASH_REDIS_REST_TOKEN=ASOnAAImcDIxZTY1Y2M4ZDUzNmI0ODRlYTdhMGFjMWJmYWE4ZjU1NXAyOTEyNw
 
-# Redis tradicional (alternativa)
-REDIS_URL=redis://localhost:6379
-# Exemplos de outros serviços Redis:
-# Redis Cloud: redis://username:password@host:port
-# Railway: redis://default:password@host:port
+# Database Configuration (para idempotência e leads)
+DATABASE_URL_IDEMPOTENCY=postgresql://neondb_owner:npg_bhkFf96dzpqC@ep-fancy-bread-acd2wxxn-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 
-# Database Configuration (para idempotência)
-DATABASE_URL_IDEMPOTENCY=postgresql://user:password@host:port/database
+# Database Configuration para Leads (mesmo banco)
+DATABASE_URL_LEADS=postgresql://neondb_owner:npg_bhkFf96dzpqC@ep-fancy-bread-acd2wxxn-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+
+# Integrações Externas (Opcionais)
+POWER_AUTOMATE_OUTBOUND_URL=https://prod-xxx.flow.microsoft.com
+CRM_WEBHOOK_URL=https://crm.example.com/webhook
+
+# DocuSign (Opcional)
+DOCUSIGN_CLIENT_ID=your-docusign-client-id
+DOCUSIGN_CLIENT_SECRET=your-docusign-client-secret
+DOCUSIGN_ACCOUNT_ID=your-docusign-account-id
+
+# WhatsApp Business (Opcional)
+WHATSAPP_TOKEN=your-whatsapp-token
+WHATSAPP_PHONE_NUMBER_ID=your-phone-number-id
+
+# Microsoft Graph (Opcional)
+GRAPH_CLIENT_ID=your-graph-client-id
+GRAPH_CLIENT_SECRET=your-graph-client-secret
+GRAPH_TENANT_ID=your-tenant-id
